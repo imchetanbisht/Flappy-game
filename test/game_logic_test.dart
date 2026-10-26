@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flappy_bird/models/level_config.dart';
 import 'package:flappy_bird/models/power_up.dart';
 import 'package:flappy_bird/services/storage_service.dart';
+import 'package:flappy_bird/services/ad_service.dart';
 import 'package:flappy_bird/game/components/bird_component.dart';
 
 void main() {
@@ -293,6 +294,67 @@ void main() {
       final alreadyUnlocked = await storage.unlockScenery('mountain');
       expect(alreadyUnlocked, isTrue);
       expect(storage.coins, equals(200));
+    });
+
+    test('Play session counter triggers ad strictly on every 3rd game or retry', () async {
+      expect(storage.playSessionCount, equals(0));
+      expect(storage.shouldShowPlayAd, isFalse);
+
+      // Game 1
+      await storage.incrementPlaySessionCount();
+      expect(storage.playSessionCount, equals(1));
+      expect(storage.shouldShowPlayAd, isFalse);
+
+      // Game 2
+      await storage.incrementPlaySessionCount();
+      expect(storage.playSessionCount, equals(2));
+      expect(storage.shouldShowPlayAd, isFalse);
+
+      // Game 3 (3rd game / retry milestone) -> Trigger Ad
+      await storage.incrementPlaySessionCount();
+      expect(storage.playSessionCount, equals(3));
+      expect(storage.shouldShowPlayAd, isTrue);
+
+      // Game 4
+      await storage.incrementPlaySessionCount();
+      expect(storage.playSessionCount, equals(4));
+      expect(storage.shouldShowPlayAd, isFalse);
+
+      // Game 5
+      await storage.incrementPlaySessionCount();
+      expect(storage.playSessionCount, equals(5));
+      expect(storage.shouldShowPlayAd, isFalse);
+
+      // Game 6 (next 3rd game milestone) -> Trigger Ad
+      await storage.incrementPlaySessionCount();
+      expect(storage.playSessionCount, equals(6));
+      expect(storage.shouldShowPlayAd, isTrue);
+    });
+
+    test('AdService configures production AdMob IDs and invokes proceed callbacks seamlessly', () async {
+      final adService = AdService(storage);
+
+      // Verify production AdMob IDs match user specifications exactly
+      expect(AdService.interstitialAdUnitId, equals('ca-app-pub-1444309620070901/7520815569'));
+      expect(AdService.appId, equals('ca-app-pub-1444309620070901~6314922983'));
+
+      // Test game play/retry flow invokes onProceed
+      bool proceedCalled = false;
+      await adService.handleGamePlayOrRetry(
+        onProceed: () {
+          proceedCalled = true;
+        },
+      );
+      expect(proceedCalled, isTrue);
+
+      // Test scenery unlock flow invokes onProceed
+      bool unlockProceedCalled = false;
+      await adService.handleSceneryUnlock(
+        onProceed: () {
+          unlockProceedCalled = true;
+        },
+      );
+      expect(unlockProceedCalled, isTrue);
     });
   });
 

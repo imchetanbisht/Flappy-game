@@ -3,6 +3,7 @@ import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import '../../services/ad_service.dart';
 import '../../services/audio_service.dart';
 import '../../services/storage_service.dart';
 import 'game_screen.dart';
@@ -408,12 +409,14 @@ class _GroundPainter extends CustomPainter {
 class HomeScreen extends StatefulWidget {
   final StorageService storage;
   final AudioService audio;
+  final AdService adService;
 
-  const HomeScreen({
+  HomeScreen({
     super.key,
     required this.storage,
     required this.audio,
-  });
+    AdService? adService,
+  }) : adService = adService ?? AdService(storage, audio);
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -564,34 +567,42 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  void _playGame() async {
+  void _playGame() {
     widget.audio.triggerHaptic();
-    setState(() {
-      _isNavigatedToGame = true;
-    });
-    _pauseHomeAnimations();
+    widget.adService.handleGamePlayOrRetry(
+      onProceed: () async {
+        if (!mounted) return;
+        setState(() {
+          _isNavigatedToGame = true;
+        });
+        _pauseHomeAnimations();
 
-    await Navigator.of(context).push(
-      PageRouteBuilder(
-        transitionDuration: const Duration(milliseconds: 300),
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            GameScreen(storage: widget.storage, audio: widget.audio),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-      ),
+        await Navigator.of(context).push(
+          PageRouteBuilder(
+            transitionDuration: const Duration(milliseconds: 300),
+            pageBuilder: (context, animation, secondaryAnimation) => GameScreen(
+              storage: widget.storage,
+              audio: widget.audio,
+              adService: widget.adService,
+            ),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+          ),
+        );
+
+        // Refresh high score, coins, and scenery upon returning to home screen
+        if (mounted) {
+          setState(() {
+            _isNavigatedToGame = false;
+          });
+          _resumeHomeAnimations();
+          if (widget.storage.musicEnabled) {
+            widget.audio.playBgm(force: true);
+          }
+        }
+      },
     );
-
-    // Refresh high score, coins, and scenery upon returning to home screen
-    if (mounted) {
-      setState(() {
-        _isNavigatedToGame = false;
-      });
-      _resumeHomeAnimations();
-      if (widget.storage.musicEnabled) {
-        widget.audio.playBgm(force: true);
-      }
-    }
   }
 
   void _openSceneryModal() {
@@ -1134,6 +1145,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                         if (mounted) {
                                           setState(() {});
                                         }
+                                        // Trigger real full-screen ad on scenery unlock
+                                        await widget.adService.handleSceneryUnlock();
                                       }
                                       return;
                                     }

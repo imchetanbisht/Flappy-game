@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import '../models/game_state.dart';
 import '../models/level_config.dart';
 import '../models/power_up.dart';
+import '../services/ad_service.dart';
 import '../services/audio_service.dart';
 import '../services/storage_service.dart';
 import 'components/background_component.dart';
@@ -23,11 +24,13 @@ import 'components/snowball_component.dart';
 class FlappyGame extends FlameGame with HasCollisionDetection, TapCallbacks {
   final StorageService storage;
   final AudioService audio;
+  final AdService adService;
 
   FlappyGame({
     required this.storage,
     required this.audio,
-  }) {
+    AdService? adService,
+  }) : adService = adService ?? AdService(storage, audio) {
     statusNotifier = ValueNotifier<GameStatus>(GameStatus.ready);
     scoreNotifier = ValueNotifier<int>(0);
     coinNotifier = ValueNotifier<int>(storage.coins);

@@ -1,6 +1,7 @@
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import '../../game/flappy_game.dart';
+import '../../services/ad_service.dart';
 import '../../services/audio_service.dart';
 import '../../services/storage_service.dart';
 import '../overlays/game_hud_overlay.dart';
@@ -10,12 +11,14 @@ import '../overlays/pause_overlay.dart';
 class GameScreen extends StatefulWidget {
   final StorageService storage;
   final AudioService audio;
+  final AdService adService;
 
-  const GameScreen({
+  GameScreen({
     super.key,
     required this.storage,
     required this.audio,
-  });
+    AdService? adService,
+  }) : adService = adService ?? AdService(storage, audio);
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -31,6 +34,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     _game = FlappyGame(
       storage: widget.storage,
       audio: widget.audio,
+      adService: widget.adService,
     );
   }
 

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../../services/ad_service.dart';
 import '../../services/audio_service.dart';
 import '../../services/storage_service.dart';
 import '../theme/game_theme.dart';
@@ -130,6 +131,8 @@ class _SplashScreenState extends State<SplashScreen>
   Future<void> _initGame() async {
     final storage = await StorageService.init();
     final audio = AudioService(storage);
+    final adService = AdService(storage, audio);
+    await adService.init();
 
     if (!mounted) return;
     _splashTimer = Timer(const Duration(seconds: 5), () {
@@ -138,7 +141,7 @@ class _SplashScreenState extends State<SplashScreen>
         PageRouteBuilder(
           transitionDuration: const Duration(milliseconds: 500),
           pageBuilder: (context, animation, secondaryAnimation) =>
-              HomeScreen(storage: storage, audio: audio),
+              HomeScreen(storage: storage, audio: audio, adService: adService),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },

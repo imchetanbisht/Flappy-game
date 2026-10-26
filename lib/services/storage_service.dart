@@ -108,6 +108,16 @@ class StorageService {
   int get totalGames => _prefs.getInt(_keyTotalGames) ?? 0;
   Future<void> incrementGames() async => await _prefs.setInt(_keyTotalGames, totalGames + 1);
 
+  // --- Ad Display Counters (Every 3rd Game / Retry) ---
+  static const String _keyPlaySessionCount = 'flappy_play_session_count';
+  int get playSessionCount => _prefs.getInt(_keyPlaySessionCount) ?? 0;
+  Future<int> incrementPlaySessionCount() async {
+    final next = playSessionCount + 1;
+    await _prefs.setInt(_keyPlaySessionCount, next);
+    return next;
+  }
+  bool get shouldShowPlayAd => (playSessionCount > 0 && playSessionCount % 3 == 0);
+
   // --- Reset Progress ---
   Future<void> resetAllProgress() async {
     final sfx = sfxEnabled;

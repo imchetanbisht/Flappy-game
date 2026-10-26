@@ -110,7 +110,11 @@ class GameOverOverlay extends StatelessWidget {
               shadowColor: const Color(0xFFB54502),
               onPressed: () {
                 game.audio.playClick();
-                game.resetGame();
+                game.adService.handleGamePlayOrRetry(
+                  onProceed: () {
+                    game.resetGame();
+                  },
+                );
               },
             ),
             const SizedBox(height: 12),
