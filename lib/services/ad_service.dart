@@ -5,7 +5,7 @@ import 'audio_service.dart';
 import 'storage_service.dart';
 
 class AdService {
-  // Production Real AdMob IDs
+  // Production Real AdMob IDs (Used on Android / iOS mobile releases)
   static const String interstitialAdUnitId = 'ca-app-pub-1444309620070901/7520815569';
   static const String appId = 'ca-app-pub-1444309620070901~6314922983';
 
@@ -18,14 +18,16 @@ class AdService {
 
   AdService(this.storage, [this.audio]);
 
-  bool get isSupportedPlatform => !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+  bool get isSupportedPlatform =>
+      !kIsWeb && (Platform.isAndroid || Platform.isIOS);
 
   bool get isAdReady => _interstitialAd != null;
 
-  /// Initializes MobileAds SDK on mobile devices and triggers pre-loading
+  /// Initializes Google Mobile Ads SDK on supported platforms
   Future<void> init() async {
     if (!isSupportedPlatform || _isInitialized) return;
     try {
+      debugPrint('AdService: Initializing Google Mobile Ads (AdMob) for Android/iOS...');
       await MobileAds.instance.initialize();
       _isInitialized = true;
       loadInterstitialAd();
@@ -57,8 +59,10 @@ class AdService {
     );
   }
 
-  /// Shows the cached full-screen interstitial ad and calls [onComplete] upon dismissal
+  /// Shows the preloaded full-screen real interstitial ad and calls [onComplete] upon dismissal
   Future<void> showInterstitialAd({VoidCallback? onComplete}) async {
+    final shouldResumeMusic = storage.musicEnabled;
+
     if (!isSupportedPlatform || _interstitialAd == null) {
       // If ad is not ready or platform is desktop/test, proceed seamlessly
       loadInterstitialAd();
@@ -69,7 +73,6 @@ class AdService {
     final ad = _interstitialAd!;
     _interstitialAd = null; // Mark as consumed
 
-    final shouldResumeMusic = storage.musicEnabled;
     try {
       audio?.pauseBgm();
     } catch (_) {}
@@ -120,16 +123,16 @@ class AdService {
   Future<void> handleGamePlayOrRetry({required VoidCallback onProceed}) async {
     await storage.incrementPlaySessionCount();
     if (storage.shouldShowPlayAd) {
-      debugPrint('Ad Trigger: 3rd game session milestone reached (${storage.playSessionCount}). Showing real ad.');
+      debugPrint('Ad Trigger: 3rd game session milestone reached (${storage.playSessionCount}). Showing ad.');
       await showInterstitialAd(onComplete: onProceed);
     } else {
       onProceed();
     }
   }
 
-  /// Handles scenery unlock: shows real full-screen ad whenever player unlocks scenery
+  /// Handles scenery unlock: shows full-screen ad whenever player unlocks scenery
   Future<void> handleSceneryUnlock({VoidCallback? onProceed}) async {
-    debugPrint('Ad Trigger: Scenery unlocked with coins. Showing real ad.');
+    debugPrint('Ad Trigger: Scenery unlocked with coins. Showing ad.');
     await showInterstitialAd(onComplete: onProceed);
   }
 }
